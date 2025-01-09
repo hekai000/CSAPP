@@ -1,7 +1,7 @@
 /* 
  * CS:APP Data Lab 
  * 
- * <Please put your name and userid here>
+ * <hekai>
  * 
  * bits.c - Source file with your solutions to the Lab.
  *          This is the file you will hand in to your instructor.
@@ -143,7 +143,9 @@ NOTES:
  *   Rating: 1
  */
 int bitXor(int x, int y) {
-  return 2;
+  /*exploit ~ and & to compute x^y*/
+  
+  return ~(~(x&~y) & ~(~x&y));
 }
 /* 
  * tmin - return minimum two's complement integer 
@@ -153,7 +155,7 @@ int bitXor(int x, int y) {
  */
 int tmin(void) {
 
-  return 2;
+  return 0x1<<31;
 
 }
 //2
@@ -165,7 +167,7 @@ int tmin(void) {
  *   Rating: 1
  */
 int isTmax(int x) {
-  return 2;
+  return !(~((x+1)+x) | !(x+1));
 }
 /* 
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
@@ -176,7 +178,9 @@ int isTmax(int x) {
  *   Rating: 2
  */
 int allOddBits(int x) {
-  return 2;
+  int mask = 0xAA + (0xAA<<8);
+  mask = mask + (mask<<16);
+  return !((x & mask) ^ mask);
 }
 /* 
  * negate - return -x 
@@ -186,7 +190,8 @@ int allOddBits(int x) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+  /*-x = ~x+1*/
+  return ~x + 1;
 }
 //3
 /* 
@@ -199,7 +204,9 @@ int negate(int x) {
  *   Rating: 3
  */
 int isAsciiDigit(int x) {
-  return 2;
+  /*x-0x30>=0 && 0x39-x>=0*/
+  int T = 0x1<<31;
+  return !((x+~0x30+1) & T) & !((0x39+~x+1) & T);
 }
 /* 
  * conditional - same as x ? y : z 
@@ -209,7 +216,9 @@ int isAsciiDigit(int x) {
  *   Rating: 3
  */
 int conditional(int x, int y, int z) {
-  return 2;
+  x = !!x;
+  x = ~x+1;
+  return (x&y) | (~x&z);
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -219,7 +228,10 @@ int conditional(int x, int y, int z) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  return 2;
+
+  int T = 0x1<<31;
+  x = ~x+1;
+  return !((x+y) & T);
 }
 //4
 /* 
@@ -231,7 +243,9 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4 
  */
 int logicalNeg(int x) {
-  return 2;
+  /*非0 的逻辑非是 0    0 的逻辑非是1, x | ~x+1 ,只有0，位或相反数时，符号位才为0，其他均为1*/
+
+  return ~((x | (~x+1)))>>31&1;
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
@@ -246,7 +260,29 @@ int logicalNeg(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-  return 0;
+  /*正数时，最高位1的位置+1， 负数时，最高位0的位置+1，归一化为正数处理*/
+  int b16,b8,b4,b2,b1,b0;
+  int sign = x>>31;
+  x = (sign&~x) | (~sign&x);
+  
+  b16 = !!(x>>16)<<4;
+  x = x>>b16;
+
+  b8 = !!(x>>8)<<3;
+  x = x>>b8;
+
+  b4 = !!(x>>4)<<2;
+  x = x>>b4;
+
+  b2 = !!(x>>2)<<1;
+  x = x>>b2;
+
+  b1 = !!(x>>1);
+  x = x>>b1;
+
+  b0 = x;
+
+  return b16+b8+b4+b2+b1+b0+1;
 }
 //float
 /* 
