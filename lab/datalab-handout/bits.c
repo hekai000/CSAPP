@@ -297,7 +297,23 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-  return 2;
+  int s, exp;
+  s = uf & 0x80000000;
+  exp = (uf & 0x7F800000)>>23;
+  // printf("uf:%d, s:%d, exp:%d", uf, s, exp);
+  if (exp==255) {
+    return uf;
+  }
+  if (exp==0) {
+    return ((uf & 0x007fffff) << 1) | (uf & (1 << 31));
+  }
+  exp++;
+
+  // if (exp==255) {
+  //   return 0x7F800000 | s;
+  // }
+
+  return (exp<<23)|(uf & 0x807FFFFF);
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
@@ -312,7 +328,41 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-  return 2;
+  /*
+  (1) 取出符号位，指数位，尾数
+  (2) 如果E<0,直接由于M是1.xxx或0.xxx，M表示的二进制小数 
+  小数点左边只有一位，E小于0表示小数点至少往左边移动一位，所以移动完成后，
+  小数点的右边一定是0，即整数部分是0，这种情况下，直接返回0就是要求的答案
+  (3)E>= 32，表示M一定是1.xxx（因为E等于-126时M才是0.xxx），如果E >= 32，
+  表示小数点要往右移动32bit，但是int类型最多32bit，所以会爆掉，按照题目要求返回 0x80000000u
+  (4) 0<=E<32
+  这里需要先把frac23bit前面的1补上，即$(1<<23) | frac$​​​，这个表达式代表M，如M = 1.11001，
+  则这个表达式就是11100100......000（共24bit）
+  当E>=23时，表示小数点右移可以把M小数点右边的23bit小数都吃掉，还能给后面继续补0，所以直接返回24bit+（补的几个0）即可。
+  当E<23时，表示小数点右移不能把M小数点右边的23bit小数都吃掉，只能吃掉一部分，所以返回24bit右移“割舍的bit”
+  */
+  int s, exp,f,E;
+
+  s = (uf & 0x80000000)>>31;
+  exp = (uf & 0x7F800000)>>23;
+  f = uf & 0x007fffff;
+  E = exp -127;
+  f = f | 1 <<23;
+
+  if (E < 0) return 0;
+  if (E>=31) {
+    return 0x80000000u;
+  }
+  if (E<23) {
+    f >>=(23-E);
+  }else {
+    f<<=(E-23);
+  }
+  if (s) {
+    return ~f+1;
+  }else{
+    return f;
+  }
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
@@ -328,5 +378,28 @@ int floatFloat2Int(unsigned uf) {
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+/*
+情况1：非规格化值能表示的最小2.0x是2-149，所以x<-149时，float无法表示，直接返回0
+
+情况2：规格化值能表示的最小2.0x是2^-126，所以-149 <= x < -126时，是非规格化的值可以表示的，
+非规格化的值特点是阶码exp为0，E = 1 - Bias = -126,，比如x是-130，$V = 2^{-126} * 2^{-4}$，
+所以M = 2^-4，要返回2^-130的float表示就是0 ，0000 0000， 000 01000 00000 00000 00000，
+可以看到是1左移了19bit，19=23-4
+
+情况3：规格化值能表示的最大2.0x是2^127，所以 -126 <= x <= 127时，要使V是2.0x，
+需要M是1.000......00，这个很简单，直接把exp的值<<23bit即可，exp = E +Bias(E就是x)
+
+情况4：x > 127时，float无法表示了，返回+INF
+*/
+  if (x<-149) return 0;
+  if (x < -126) {
+    int shift = 23 + x + 126;
+    return 1 << shift;
+  }
+  if (x<=127){
+    int exp = x + 127;
+    return exp<<23;
+  }else {
+    return 0xFF<<23;
+  }
 }
