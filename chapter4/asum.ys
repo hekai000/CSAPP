@@ -1,0 +1,40 @@
+# Execution begins at address 0 
+    .pos 0
+init:   irmovq stack, %esp      # Set up stack pointer
+        irmovq stack, %ebp       # Set up base pointer
+        jmp main            # Execution main program 
+
+# Array of 4 elements
+    .align 4
+array:  .long 0xd
+        .long 0xc0
+        .long 0xb00
+        .long 0xa000
+
+main:   irmovl $4, %eax
+        pushl %eax            # Push 4 onto stack
+        irmovq array, %edx
+        pushl %edx            # Push array onto stack
+        call Sum             # Sum(array, 4)
+        halt
+
+# int Sum(int* Start, int Count)
+Sum:    pushl %ebp           # Save base pointer
+        rmovl %esp, %ebp     # Set up new base pointer
+        mrmovl 8(%ebp), %ecx  # ecx = Start
+        mrmovl 12(%ebp), %edx # edx = Count
+        irmovl $0, %eax       # sum = 0
+        andl   %edx, %edx  
+        je    End        
+Loop:   mrmovl (%ecx), %esi  # Get *Start
+        addl   %esi, %eax    # Add to sum
+        irmovl $4, %ebx
+        addl %ebx, %ecx      # Start++
+        irmovl $-1, %ebx
+        addl %ebx, %edx      # Count--
+        jne    Loop        
+End:    popl    %ebp
+        ret                  # Return
+        .pos 0x100
+Stack: #the stack starts here
+                        
